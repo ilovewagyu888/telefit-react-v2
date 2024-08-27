@@ -44,13 +44,13 @@ export default function Index() {
                 <p className="text-sm">Calculate your BMI</p>
             </Link>
 
-            <div className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
+            <Link to="/workout" className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
                 <Dumbbell/>
                 <h1 className="text-lg font-semibold mt-3">Workout Routines</h1>
-                <p className="text-sm">Update this???</p>
-            </div>
+                <p className="text-sm">Create/Edit Workout Routines</p>
+            </Link>
 
-            <Link to="/calorie-counter" className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
+            <Link to="/calories" className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
                 <ListCheck/>
                 <h1 className="text-lg font-semibold mt-3">Calorie Counter</h1>
                 <p className="text-sm">Calculate your calorie intake</p>

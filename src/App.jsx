@@ -6,38 +6,46 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import WorkoutPage from "./pages/WorkoutPage";
+import CalorieCalculator from "./pages/CalorieCalculator";
 
 export default function App() {
-
   return (
     <>
-    <Router>
-      <Layout>
+      <Router>
+        <Layout>
           <Switch>
-
             <Route exact path="/">
-              <Index/>
+              <Index />
             </Route>
 
             <Route exact path="/bmi">
-              <Bmi/>
+              <Bmi />
             </Route>
 
             <Route exact path="/register">
-              <Register/>
+              <Register />
             </Route>
 
             <Route exact path="/login">
-              <Login/>
+              <Login />
             </Route>
 
             <Route exact path="/dashboard">
-              <ProtectedRoute component={Dashboard}/>
+              <ProtectedRoute component={Dashboard} />
+            </Route>
+
+            <Route exact path="/workout">
+              <ProtectedRoute component={WorkoutPage} />
+            </Route>
+
+            <Route exact path="/calories">
+              <CalorieCalculator />
             </Route>
 
           </Switch>
-      </Layout>
-    </Router>
+        </Layout>
+      </Router>
     </>
-  )
+  );
 }

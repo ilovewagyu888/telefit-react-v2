@@ -6,3 +6,7 @@
   @apply
   no-animation
 }
+
+h1, h2, h3, label {
+  @apply text-white;
+}
