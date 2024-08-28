@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import crypto from "crypto";
+import crypto from 'crypto';
 import { adminDb } from "../../src/config/firebaseAdmin.js"; // Adjust the path if needed
 
 // Initialize Firebase Admin SDK only once
@@ -13,25 +13,19 @@ function validateTelegramHash(data, hash) {
     console.log("Telegram Bot Token:", process.env.TELEGRAM_BOT_TOKEN);
 
     // Hash the bot token using SHA-256 to create the secret key
-    const secret = crypto
-        .createHash("sha256")
-        .update(process.env.TELEGRAM_BOT_TOKEN)
-        .digest();
+    const secret = crypto.createHash('sha256').update(process.env.TELEGRAM_BOT_TOKEN).digest();
 
     // Create the data check string by sorting and concatenating the data
     const dataCheckString = Object.entries(data)
-        .filter(([key]) => key !== "hash")
+        .filter(([key]) => key !== 'hash')
         .sort((a, b) => a[0].localeCompare(b[0])) // Ensure proper alphabetical sorting
         .map(([key, value]) => `${key}=${value}`)
-        .join("\n");
+        .join('\n');
 
     console.log("Data Check String:", dataCheckString);
 
     // Generate the HMAC using the secret key and the data check string
-    const computedHash = crypto
-        .createHmac("sha256", secret)
-        .update(dataCheckString)
-        .digest("hex");
+    const computedHash = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
 
     console.log("Computed Hash:", computedHash);
     console.log("Received Hash:", hash);
@@ -55,7 +49,7 @@ export async function handler(event) {
 
     try {
         // Check if the Telegram ID already exists in Firestore
-        const usersRef = admin.firestore().collection("users");
+        const usersRef = admin.firestore().collection('users');
         const querySnapshot = await usersRef
             .where("telegramId", "==", data.id)
             .get();
@@ -81,9 +75,7 @@ export async function handler(event) {
     } catch (error) {
         return {
             statusCode: 500,
-            body: JSON.stringify({
-                error: `Error checking Telegram ID: ${error.message}`,
-            }),
+            body: JSON.stringify({ error: `Error checking Telegram ID: ${error.message}` }),
         };
     }
 }

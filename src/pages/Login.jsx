@@ -1,8 +1,8 @@
 import {
   onAuthStateChanged,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithCustomToken
+  signInWithCustomToken,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { auth } from "../config/firebase";
@@ -17,9 +17,10 @@ export default function Login() {
 
   const history = useHistory();
 
-  function login() {
+  const login = () => {
     setIsLoading(true);
     setErrorMessage("");
+
     if (email !== "" && password !== "") {
       signInWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
@@ -33,10 +34,42 @@ export default function Login() {
           console.error(`Error ${error.code}: ${error.message}`);
           setErrorMessage(`Error ${error.code}: ${error.message}`);
         });
+    } else {
+      setIsLoading(false);
+      setErrorMessage("Email and password are required");
     }
-  }
+  };
 
-  function resetPassword() {
+  const handleTelegramLogin = async (user) => {
+    try {
+      // Construct a query string from all user parameters except the hash
+      const params = new URLSearchParams(user);
+      params.delete("hash"); // The hash will be sent separately for validation
+
+      // Add the hash separately for validation
+      params.append("hash", user.hash);
+
+      // Fetch the response from your Netlify function
+      const response = await fetch(
+        `/.netlify/functions/telegramLogin?${params.toString()}`
+      );
+      const result = await response.json();
+
+      if (response.status === 409) {
+        setErrorMessage("Telegram ID not registered");
+      } else if (response.status === 200 && result.customToken) {
+        await signInWithCustomToken(auth, result.customToken);
+        setIsLoading(false);
+        history.push("/dashboard");
+      } else {
+        setErrorMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setErrorMessage(`Failed to log in with Telegram: ${error.message}`);
+    }
+  };
+
+  const resetPassword = () => {
     let email = window.prompt(
       "Password reset link will be sent to your email\nEnter email:"
     );
@@ -51,7 +84,7 @@ export default function Login() {
     } else {
       alert("Email is not valid!");
     }
-  }
+  };
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
@@ -75,37 +108,9 @@ export default function Login() {
     document.getElementById("telegram-login").appendChild(script);
 
     window.TelegramLoginWidgetDataOnauth = async (user) => {
-  try {
-    // Construct a query string from all user parameters except the hash
-    const params = new URLSearchParams(user);
-    params.delete("hash"); // The hash will be sent separately for validation
-
-    // Add the hash separately for validation
-    params.append("hash", user.hash);
-
-    // Fetch the response from your Netlify function
-    const response = await fetch(
-      `/.netlify/functions/telegramLogin?${params.toString()}`
-    );
-    const result = await response.json();
-
-    if (response.status === 409) {
-      setErrorMessage("Telegram ID not registered");
-    } else if (response.status === 200 && result.id) {
-        setTelegramId(result.id);
-        console.log("Telegram ID authenticated, logging in with custom token:", result.customToken);
-
-        // Use Firebase to sign in with the custom token
-        await signInWithCustomToken(auth, result.customToken);
-        history.push("/dashboard");
-    } else {
-      setErrorMessage(`Error: ${result.error}`);
-    }
-  } catch (error) {
-    setErrorMessage(`Failed to log in with Telegram: ${error.message}`);
-  }
-};
-
+      setIsLoading(true);
+      handleTelegramLogin(user);
+    };
 
     return () => {
       document.getElementById("telegram-login")?.removeChild(script);
