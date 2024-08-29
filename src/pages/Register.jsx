@@ -83,7 +83,10 @@ export default function Register() {
         };
 
         return () => {
-            document.getElementById('telegram-login')?.removeChild(script);
+            const node = document.getElementById("telegram-login");
+            if (node && node.contains(script)) {
+                node.removeChild(script);
+            }
         };
     }, []);
 

@@ -113,9 +113,12 @@ export default function Login() {
     };
 
     return () => {
-      document.getElementById("telegram-login")?.removeChild(script);
-    };
-  }, []);
+      const node = document.getElementById("telegram-login");
+      if (node && node.contains(script)) {
+          node.removeChild(script);
+      }
+  };
+}, []);
 
   return (
     <div className="border max-w-lg mx-auto rounded-md p-10 mt-20">
