@@ -1,4 +1,12 @@
+[build]
+  command = "vite build"
+  publish = "dist"
+
+[functions]
+  external_node_modules = ["sharp"]
+  included_files = ["node_modules/@img/**/*"]
+
 [[redirects]]
-from="/*"
-to = "/index.html"
-status = 200
+  from = "/*"
+  to = "/index.html"
+  status = 200

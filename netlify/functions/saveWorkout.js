@@ -1,53 +1,45 @@
-
 import { adminDb } from '../../src/config/firebaseAdmin.js';
-import admin from 'firebase-admin';
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin SDK only once
-if (!admin.apps.length) {
-    initializeApp({
-        credential: admin.credential.cert(adminDb), // Adjust if using service account
-    });
-}
-
-const db = getFirestore();
+import { getAuth } from 'firebase-admin/auth';
 
 export async function handler(event) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
-    }
-
     try {
-        const data = JSON.parse(event.body);
-        const { userId, workoutName, exercises } = data;
+        const { workoutName, exercises, workoutId, caloriesBurned } = JSON.parse(event.body);
+        const authToken = event.headers.authorization.split('Bearer ')[1];
+        const decodedToken = await getAuth().verifyIdToken(authToken);
+        const userId = decodedToken.uid;
 
-        if (!userId || !workoutName) {
+        if (!workoutName || !caloriesBurned) {
             return {
                 statusCode: 400,
-                body: JSON.stringify({ error: 'userId and workoutName are required' }),
+                body: JSON.stringify({ error: 'Workout name and calories burned are required' }),
             };
         }
 
-        // Create a new workout document
-        const workoutRef = db.collection('users').doc(userId).collection('workouts').doc();
-        await workoutRef.set({
+        const workoutData = {
             name: workoutName,
-            exercises: exercises || [],
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        // Respond with the workout ID
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ id: workoutRef.id }),
+            exercises,
+            caloriesBurned: caloriesBurned,
+            updatedAt: new Date().toISOString(),
         };
 
+        const userRef = adminDb.collection('users').doc(userId);
+        if (workoutId) {
+            // Update existing workout
+            await userRef.collection('workouts').doc(workoutId).set(workoutData, { merge: true });
+        } else {
+            // Add new workout
+            await userRef.collection('workouts').add(workoutData);
+        }
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ success: true }),
+        };
     } catch (error) {
         console.error('Error saving workout:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: `Failed to save workout: ${error.message}` }),
+            body: JSON.stringify({ error: 'Failed to save workout' }),
         };
     }
 }

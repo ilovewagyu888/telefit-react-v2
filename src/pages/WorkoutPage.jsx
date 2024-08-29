@@ -1,220 +1,238 @@
-import { useState, useEffect } from 'react';
-import { auth } from '../config/firebase';
+import React, { useState, useEffect } from 'react';
+import { getAuth } from "firebase/auth";
+import axios from 'axios';
 
 export default function WorkoutPage() {
-    const [workouts, setWorkouts] = useState([]);
-    const [selectedWorkout, setSelectedWorkout] = useState('');
     const [workoutName, setWorkoutName] = useState('');
-    const [exercises, setExercises] = useState([]);
-    const [newExercise, setNewExercise] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [selectedWorkoutId, setSelectedWorkoutId] = useState('');
+    const [exercises, setExercises] = useState([{ name: '', reps: '', sets: '' }]);
+    const [caloriesBurned, setCaloriesBurned] = useState('');
+    const [workouts, setWorkouts] = useState([]);
+    const [message, setMessage] = useState('');
+
+    const auth = getAuth();
+
+    const fetchWorkouts = async () => {
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await axios.get('/.netlify/functions/getWorkouts', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.success) {
+                setWorkouts(response.data.workouts);
+            } else {
+                setMessage('Failed to fetch workouts.');
+            }
+        } catch (error) {
+            setMessage(`Error fetching workouts: ${error.message}`);
+        }
+    };
 
     useEffect(() => {
-        const fetchWorkouts = async () => {
-            try {
-                const user = auth.currentUser;
-
-                if (!user) {
-                    setErrorMessage('User not logged in');
-                    return;
-                }
-
-                const response = await fetch(`/.netlify/functions/getWorkouts?userId=${user.uid}`);
-                const data = await response.json();
-
-                if (response.ok) {
-                    setWorkouts(data.workouts);
-                    if (data.workouts.length > 0) {
-                        setSelectedWorkout(data.workouts[0].id);
-                        setExercises(data.workouts[0].exercises || []);
-                    }
-                } else {
-                    setErrorMessage(data.error || 'Failed to fetch workouts');
-                }
-            } catch (error) {
-                setErrorMessage(`Error fetching workouts: ${error.message}`);
-            }
-        };
-
         fetchWorkouts();
-    }, []);
+    }, [auth]);
 
-    const handleWorkoutChange = (e) => {
-        const selectedId = e.target.value;
-        setSelectedWorkout(selectedId);
+    const handleWorkoutSelection = (event) => {
+        const workoutId = event.target.value;
 
-        const workout = workouts.find(w => w.id === selectedId);
-        if (workout) {
-            setExercises(workout.exercises || []);
+        if (workoutId === 'new') {
+            // Reset fields for creating a new workout
+            setSelectedWorkoutId('');
+            setWorkoutName('');
+            setExercises([{ name: '', reps: '', sets: '' }]);
+            setCaloriesBurned('');
         } else {
-            setExercises([]);
+            const selectedWorkout = workouts.find(workout => workout.id === workoutId);
+            setSelectedWorkoutId(selectedWorkout.id);
+            setWorkoutName(selectedWorkout.name);
+            setExercises(selectedWorkout.exercises || [{ name: '', reps: '', sets: '' }]);
+            setCaloriesBurned(selectedWorkout.caloriesBurned || '');
         }
     };
 
-    const handleCreateWorkout = async () => {
-        if (!workoutName.trim()) {
-            setErrorMessage('Workout name is required');
+    const handleExerciseChange = (index, event) => {
+        const newExercises = [...exercises];
+        newExercises[index][event.target.name] = event.target.value;
+        setExercises(newExercises);
+    };
+
+    const addExerciseField = () => {
+        setExercises([...exercises, { name: '', reps: '', sets: '' }]);
+    };
+
+    const removeExerciseField = (index) => {
+        const newExercises = exercises.filter((_, i) => i !== index);
+        setExercises(newExercises);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage('');
+
+        if (!workoutName || !caloriesBurned) {
+            setMessage('Please enter a workout name and estimated calories burned.');
             return;
         }
 
         try {
-            setIsLoading(true);
-            const user = auth.currentUser;
-
-            if (!user) {
-                setErrorMessage('User not logged in');
-                return;
-            }
-
-            const response = await fetch(`/.netlify/functions/saveWorkout`, {
-                method: 'POST',
+            const token = await auth.currentUser.getIdToken();
+            const response = await axios.post('/.netlify/functions/saveWorkout', {
+                workoutName,
+                exercises,
+                caloriesBurned,
+                workoutId: selectedWorkoutId,
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: user.uid,
-                    workoutName,
-                    exercises: [],
-                }),
+                    Authorization: `Bearer ${token}`
+                }
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                setWorkouts([...workouts, { id: data.id, name: workoutName, exercises: [] }]);
-                setSelectedWorkout(data.id);
-                setExercises([]);
+            if (response.data.success) {
+                setMessage('Workout saved successfully!');
                 setWorkoutName('');
+                setExercises([{ name: '', reps: '', sets: '' }]);
+                setCaloriesBurned('');
+                setSelectedWorkoutId('');
+                // Refresh the workout list after saving
+                fetchWorkouts();
             } else {
-                setErrorMessage(data.error || 'Failed to save workout');
+                setMessage('Failed to save workout.');
             }
         } catch (error) {
-            setErrorMessage(`Error saving workout: ${error.message}`);
-        } finally {
-            setIsLoading(false);
+            setMessage(`Error saving workout: ${error.message}`);
         }
     };
 
-    const handleAddExercise = async () => {
-        if (!newExercise.trim()) {
-            setErrorMessage('Exercise name is required');
+    const handleDelete = async () => {
+        if (!selectedWorkoutId) {
+            setMessage('No workout selected to delete.');
             return;
         }
 
         try {
-            setIsLoading(true);
-            const user = auth.currentUser;
-
-            if (!user) {
-                setErrorMessage('User not logged in');
-                return;
-            }
-
-            const response = await fetch(`/.netlify/functions/saveWorkout`, {
-                method: 'POST',
+            const token = await auth.currentUser.getIdToken();
+            const response = await axios.post('/.netlify/functions/deleteWorkout', {
+                workoutId: selectedWorkoutId,
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: user.uid,
-                    workoutId: selectedWorkout,
-                    exercise: newExercise,
-                }),
+                    Authorization: `Bearer ${token}`
+                }
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                setExercises([...exercises, { name: newExercise }]);
-                setNewExercise('');
+            if (response.data.success) {
+                setMessage('Workout deleted successfully!');
+                setWorkoutName('');
+                setExercises([{ name: '', reps: '', sets: '' }]);
+                setCaloriesBurned('');
+                setSelectedWorkoutId('');
+                fetchWorkouts();
             } else {
-                setErrorMessage(data.error || 'Failed to add exercise');
+                setMessage('Failed to delete workout.');
             }
         } catch (error) {
-            setErrorMessage(`Error adding exercise: ${error.message}`);
-        } finally {
-            setIsLoading(false);
+            setMessage(`Error deleting workout: ${error.message}`);
         }
     };
 
     return (
-        <div className="max-w-lg mx-auto rounded-md p-10 mt-20">
-            <h1 className="text-center text-2xl mb-5">Your Workouts</h1>
-            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+        <div className="min-h-screen  p-10">
+            <div className="max-w-2xl mx-auto  shadow-md rounded-lg p-6">
+                <h1 className="text-3xl font-bold mb-5 text-center">Manage Your Workouts</h1>
 
-            <div className="mb-5">
-                <label htmlFor="workoutSelect" className="block text-sm mb-2">Select Workout</label>
-                <select
-                    id="workoutSelect"
-                    value={selectedWorkout}
-                    onChange={handleWorkoutChange}
-                    className="border input-bordered py-2 px-3 rounded-md w-full"
-                >
-                    {workouts.length > 0 ? (
-                        workouts.map(workout => (
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700">Select Existing Workout or Create New</label>
+                    <select
+                        value={selectedWorkoutId || 'new'}
+                        onChange={handleWorkoutSelection}
+                        className="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+                    >
+                        <option value="new">Create a new workout</option>
+                        {workouts.map((workout) => (
                             <option key={workout.id} value={workout.id}>
                                 {workout.name}
                             </option>
-                        ))
-                    ) : (
-                        <option value="">No workouts available</option>
-                    )}
-                </select>
-            </div>
+                        ))}
+                    </select>
+                </div>
 
-            <div className="mb-5">
-                <label htmlFor="newWorkout" className="block text-sm mb-2">Create New Workout</label>
-                <input
-                    type="text"
-                    id="newWorkout"
-                    value={workoutName}
-                    onChange={(e) => setWorkoutName(e.target.value)}
-                    className="border input-bordered py-2 px-3 rounded-md w-full"
-                    placeholder="Enter workout name"
-                />
-                <button
-                    onClick={handleCreateWorkout}
-                    disabled={isLoading}
-                    className="bg-blue-700 px-3 py-3 rounded-md text-sm text-white mt-2 w-full"
-                >
-                    {isLoading ? 'Creating...' : 'Create Workout'}
-                </button>
-            </div>
-
-            {selectedWorkout && (
-                <div>
-                    <h2 className="text-xl mb-3">Exercises</h2>
-                    {exercises.length > 0 ? (
-                        <ul>
-                            {exercises.map((exercise, index) => (
-                                <li key={index}>{exercise.name}</li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p>No exercises added yet.</p>
-                    )}
-
-                    <div className="mt-5">
-                        <label htmlFor="newExercise" className="block text-sm mb-2">Add Exercise</label>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-5">
+                        <label className="block text-sm font-medium text-gray-700">Workout Name</label>
                         <input
                             type="text"
-                            id="newExercise"
-                            value={newExercise}
-                            onChange={(e) => setNewExercise(e.target.value)}
-                            className="border input-bordered py-2 px-3 rounded-md w-full"
-                            placeholder="Enter exercise name"
+                            value={workoutName}
+                            onChange={(e) => setWorkoutName(e.target.value)}
+                            className="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
                         />
-                        <button
-                            onClick={handleAddExercise}
-                            disabled={isLoading}
-                            className="bg-green-700 px-3 py-3 rounded-md text-sm text-white mt-2 w-full"
-                        >
-                            {isLoading ? 'Adding...' : 'Add Exercise'}
-                        </button>
                     </div>
-                </div>
-            )}
+
+                    <div className="mb-5">
+                        <label className="block text-sm font-medium text-gray-700">Estimated Total Calories Burned</label>
+                        <input
+                            type="number"
+                            value={caloriesBurned}
+                            onChange={(e) => setCaloriesBurned(e.target.value)}
+                            className="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2"
+                        />
+                    </div>
+
+                    {exercises.map((exercise, index) => (
+                        <div key={index} className="mb-5 p-4  rounded-md">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold">Exercise {index + 1}</h3>
+                                <button type="button" onClick={() => removeExerciseField(index)} className="text-red-500 hover:text-red-700">
+                                    Remove
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="Exercise Name"
+                                    value={exercise.name}
+                                    onChange={(e) => handleExerciseChange(index, e)}
+                                    className="border border-gray-300 rounded-md p-2"
+                                />
+                                <input
+                                    type="number"
+                                    name="reps"
+                                    placeholder="Reps"
+                                    value={exercise.reps}
+                                    onChange={(e) => handleExerciseChange(index, e)}
+                                    className="border border-gray-300 rounded-md p-2"
+                                />
+                                <input
+                                    type="number"
+                                    name="sets"
+                                    placeholder="Sets"
+                                    value={exercise.sets}
+                                    onChange={(e) => handleExerciseChange(index, e)}
+                                    className="border border-gray-300 rounded-md p-2"
+                                />
+                            </div>
+                        </div>
+                    ))}
+                    <button type="button" onClick={addExerciseField} className="bg-green-500 text-white px-4 py-2 rounded-md shadow hover:bg-green-600">
+                        Add Exercise
+                    </button>
+                    <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md shadow hover:bg-blue-600 mt-4">
+                        Save Workout
+                    </button>
+                    {selectedWorkoutId && (
+                        <button type="button" onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded-md shadow hover:bg-red-600 mt-4">
+                            Delete Workout
+                        </button>
+                    )}
+                </form>
+                {message && (
+                    <div className="mt-5 text-center text-red-500">
+                        {message}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

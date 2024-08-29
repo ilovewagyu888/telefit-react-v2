@@ -1,50 +1,57 @@
-
-import { adminDb } from '../../src/config/firebaseAdmin.js';
 import admin from 'firebase-admin';
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
+import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import serviceAccount from '../../src/config/serviceAccountKey.json'; 
 
-
-// Initialize Firebase Admin SDK only once
 if (!admin.apps.length) {
-  initializeApp({
-      credential: admin.credential.cert(adminDb), // Adjust if using service account
-  });
+    initializeApp({
+        credential: cert(serviceAccount),
+    });
 }
+
+const db = getFirestore();
+
 export async function handler(event) {
-    if (event.httpMethod !== 'POST') {
+    if (event.httpMethod !== 'GET') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     try {
-        const data = JSON.parse(event.body);
-        const { userId, workoutName, exercises } = data;
+        const userToken = event.headers.authorization?.split('Bearer ')[1];
 
-        if (!userId || !workoutName) {
+        if (!userToken) {
+            return { statusCode: 401, body: 'Unauthorized: Missing token' };
+        }
+
+        const decodedToken = await admin.auth().verifyIdToken(userToken);
+        const userId = decodedToken.uid;
+
+        if (!userId) {
+            return { statusCode: 400, body: 'User ID required' };
+        }
+
+        const workoutsSnapshot = await db.collection('users').doc(userId).collection('workouts').get();
+
+        if (workoutsSnapshot.empty) {
             return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'userId and workoutName are required' }),
+                statusCode: 200,
+                body: JSON.stringify({ success: true, workouts: [] }),
             };
         }
 
-        // Create a new document in the 'workouts' collection
-        const workoutRef = adminDb.collection('workouts').doc();
-        await workoutRef.set({
-            userId,
-            workoutName,
-            exercises,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        const workouts = workoutsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Workout saved successfully' }),
+            body: JSON.stringify({ success: true, workouts }),
         };
     } catch (error) {
-        console.error('Error saving workout:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: `Failed to save workout: ${error.message}` }),
+            body: JSON.stringify({ success: false, error: error.message }),
         };
     }
 }

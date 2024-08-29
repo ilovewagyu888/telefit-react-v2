@@ -1,44 +1,32 @@
-// deleteWorkout.js in /netlify/functions/
-
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
-
-const app = initializeApp();
-const db = getFirestore(app);
+import { adminDb } from '../../src/config/firebaseAdmin.js';
 
 export async function handler(event) {
-  if (event.httpMethod !== 'DELETE') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+    const { workoutId } = JSON.parse(event.body);
 
-  try {
-    const { token, workoutId } = JSON.parse(event.body);
-
-    if (!token || !workoutId) {
-      return { statusCode: 400, body: 'Missing required fields' };
+    if (!workoutId) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Workout ID is required' }),
+        };
     }
 
-    const decodedToken = await getAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
+    try {
+        const workoutRef = adminDb.collection('users')
+            .doc(event.user.uid)
+            .collection('workouts')
+            .doc(workoutId);
 
-    const workoutRef = db.collection('workouts').doc(workoutId);
-    const workout = await workoutRef.get();
+        await workoutRef.delete();
 
-    if (!workout.exists || workout.data().userId !== userId) {
-      return { statusCode: 404, body: 'Workout not found or unauthorized' };
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ success: true }),
+        };
+    } catch (error) {
+        console.error('Error deleting workout:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Failed to delete workout' }),
+        };
     }
-
-    await workoutRef.delete();
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Workout deleted successfully' }),
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `Failed to delete workout: ${error.message}` }),
-    };
-  }
 }
