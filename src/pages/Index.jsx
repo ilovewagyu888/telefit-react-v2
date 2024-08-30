@@ -56,11 +56,11 @@ export default function Index() {
                 <p className="text-sm">Calculate your calorie intake</p>
             </Link>
 
-            <div className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
+            <Link to="/progress" className="p-5 bg-gray-50/75 border h-fit rounded-md hover:bg-blue-50 cursor-pointer">
                 <Hourglass/>
                 <h1 className="text-lg font-semibold mt-3">Progress</h1>
                 <p className="text-sm">Update this???</p>
-            </div>
+            </Link>
         </div>
 
     </>

@@ -9,6 +9,7 @@ export default function CalorieCalculator() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null);
+    const [foodName, setFoodName] = useState(''); // State for food name
 
     useEffect(() => {
         const auth = getAuth();
@@ -89,10 +90,16 @@ export default function CalorieCalculator() {
     };
 
     const handleSaveCalorieInput = async () => {
-        setError(null);
+        if (!foodName.trim()) {
+            setError('Please enter a name for the food.');
+            return;
+        }
 
+        setError(null);
+    
         try {
             const token = await user.getIdToken();
+    
             const response = await fetch('/.netlify/functions/saveCalorieInput', {
                 method: 'POST',
                 headers: {
@@ -100,16 +107,17 @@ export default function CalorieCalculator() {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    results,
+                    userId: user.uid,
+                    foodName, // Include food name
+                    results, // Send all food items
                     totalCalories,
-                    date: new Date().toISOString().split('T')[0] // Use current date
                 }),
             });
-
+    
             if (!response.ok) {
                 throw new Error('Failed to save calorie input.');
             }
-
+    
             setError('Calorie input saved successfully.');
         } catch (error) {
             setError(`Failed to save calorie input: ${error.message}`);
@@ -191,6 +199,21 @@ export default function CalorieCalculator() {
                         <div className="mt-6 text-lg font-semibold">
                             Total Calories: <span className="text-blue-600">{totalCalories}</span>
                         </div>
+                    </div>
+                )}
+
+                {/* Food Name Input Field */}
+                {user && results && (
+                    <div className="mt-6">
+                        <label htmlFor="foodName" className="block text-sm font-medium text-gray-700">Food Name</label>
+                        <input
+                            type="text"
+                            id="foodName"
+                            value={foodName}
+                            onChange={(e) => setFoodName(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            placeholder="Enter a name for the food"
+                        />
                     </div>
                 )}
 
