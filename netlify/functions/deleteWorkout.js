@@ -1,6 +1,14 @@
 import { adminDb } from '../../src/config/firebaseAdmin.js';
+import admin from 'firebase-admin';
 
 export async function handler(event) {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method Not Allowed' }),
+        };
+    }
+
     const { workoutId } = JSON.parse(event.body);
 
     if (!workoutId) {
@@ -10,9 +18,22 @@ export async function handler(event) {
         };
     }
 
+    const token = event.headers.authorization?.split('Bearer ')[1];
+
+    if (!token) {
+        return {
+            statusCode: 401,
+            body: JSON.stringify({ error: 'Unauthorized: Missing token' }),
+        };
+    }
+
     try {
+        // Verify the user token and get the user ID
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        const uid = decodedToken.uid;
+
         const workoutRef = adminDb.collection('users')
-            .doc(event.user.uid)
+            .doc(uid)
             .collection('workouts')
             .doc(workoutId);
 
