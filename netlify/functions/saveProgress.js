@@ -1,12 +1,4 @@
-import admin from 'firebase-admin';
-import { initializeApp, cert } from 'firebase-admin/app';
-import serviceAccount from '../../src/config/serviceAccountKey.json';
-
-if (!admin.apps.length) {
-    initializeApp({
-        credential: cert(serviceAccount),
-    });
-}
+import { adminDb, admin } from '../../src/config/firebaseAdmin.js'; // Import adminDb and admin
 
 export const handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -36,8 +28,7 @@ export const handler = async (event) => {
             };
         }
 
-        const db = admin.firestore();
-        const progressRef = db.collection('users').doc(userId).collection('progress').doc(date);
+        const progressRef = adminDb.collection('users').doc(userId).collection('progress').doc(date);
 
         // Save progress data
         await progressRef.set({

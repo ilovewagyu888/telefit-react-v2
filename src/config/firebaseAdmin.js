@@ -1,12 +1,16 @@
+// src/config/firebaseAdmin.js
+import admin from 'firebase-admin';
 import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import serviceAccount from './serviceAccountKey.json'; // Make sure this path is correct
 
-// Initialize Firebase Admin SDK
-const adminApp = initializeApp({
-  credential: cert(serviceAccount),
-});
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-const adminDb = getFirestore(adminApp);
+// Initialize Firebase Admin SDK only once
+if (!admin.apps.length) {
+    initializeApp({
+        credential: cert(serviceAccount),
+    });
+}
 
-export { adminDb };
+const adminDb = admin.firestore();
+
+export { adminDb, admin };

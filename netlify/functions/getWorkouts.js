@@ -1,15 +1,5 @@
-import admin from 'firebase-admin';
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import serviceAccount from '../../src/config/serviceAccountKey.json'; 
-
-if (!admin.apps.length) {
-    initializeApp({
-        credential: cert(serviceAccount),
-    });
-}
-
-const db = getFirestore();
+import { adminDb, admin } from '../../src/config/firebaseAdmin.js'; // Import the configured adminDb from firebaseAdmin.js
+//import admin from 'firebase-admin'; // Import admin for authentication
 
 export async function handler(event) {
     if (event.httpMethod !== 'GET') {
@@ -17,12 +7,14 @@ export async function handler(event) {
     }
 
     try {
+        // Extract the token from the Authorization header
         const userToken = event.headers.authorization?.split('Bearer ')[1];
 
         if (!userToken) {
             return { statusCode: 401, body: 'Unauthorized: Missing token' };
         }
 
+        // Verify the token and decode it
         const decodedToken = await admin.auth().verifyIdToken(userToken);
         const userId = decodedToken.uid;
 
@@ -30,7 +22,8 @@ export async function handler(event) {
             return { statusCode: 400, body: 'User ID required' };
         }
 
-        const workoutsSnapshot = await db.collection('users').doc(userId).collection('workouts').get();
+        // Access the Firestore database and retrieve workout data
+        const workoutsSnapshot = await adminDb.collection('users').doc(userId).collection('workouts').get();
 
         if (workoutsSnapshot.empty) {
             return {
@@ -49,6 +42,7 @@ export async function handler(event) {
             body: JSON.stringify({ success: true, workouts }),
         };
     } catch (error) {
+        console.error('Error retrieving workouts:', error); // Added logging for error
         return {
             statusCode: 500,
             body: JSON.stringify({ success: false, error: error.message }),

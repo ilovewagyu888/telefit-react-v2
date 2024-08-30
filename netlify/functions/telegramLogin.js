@@ -1,14 +1,9 @@
-import admin from 'firebase-admin';
+// src/functions/telegramLogin.js
 import crypto from 'crypto';
-import { adminDb } from "../../src/config/firebaseAdmin.js"; // Adjust the path if needed
+import { adminDb, admin } from '../../src/config/firebaseAdmin.js'; // Adjust the path if needed
+import { getAuth } from 'firebase-admin/auth';
 
-// Initialize Firebase Admin SDK only once
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(adminDb),
-    });
-}
-
+// Function to validate the Telegram hash
 function validateTelegramHash(data, hash) {
     console.log("Telegram Bot Token:", process.env.TELEGRAM_BOT_TOKEN);
 
@@ -34,6 +29,7 @@ function validateTelegramHash(data, hash) {
     return computedHash === hash;
 }
 
+// Main handler function
 export async function handler(event) {
     const { queryStringParameters } = event;
     const { hash, ...data } = queryStringParameters;
@@ -49,7 +45,7 @@ export async function handler(event) {
 
     try {
         // Check if the Telegram ID already exists in Firestore
-        const usersRef = admin.firestore().collection('users');
+        const usersRef = adminDb.collection('users');
         const querySnapshot = await usersRef
             .where("telegramId", "==", data.id)
             .get();
@@ -73,6 +69,7 @@ export async function handler(event) {
             body: JSON.stringify({ id: data.id, customToken }),
         };
     } catch (error) {
+        console.error('Error processing request:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: `Error checking Telegram ID: ${error.message}` }),

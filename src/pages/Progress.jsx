@@ -140,12 +140,7 @@ export default function ProgressPage() {
   };
 
   const handleAddWorkout = () => {
-    if (selectedWorkout) {
-      const workout = workouts.find((w) => w.name === selectedWorkout);
-      setLoggedWorkouts([...loggedWorkouts, workout]);
-      setSelectedWorkout("");
-      setCustomWorkout({ name: "", caloriesBurned: "" });
-    } else if (customWorkout.name && customWorkout.caloriesBurned) {
+    if (customWorkout.name && customWorkout.caloriesBurned) {
       if (
         isNaN(customWorkout.caloriesBurned) ||
         customWorkout.caloriesBurned <= 0
@@ -161,12 +156,7 @@ export default function ProgressPage() {
   };
 
   const handleAddFood = () => {
-    if (selectedFood) {
-      const food = foods.find((f) => f.foodName === selectedFood);
-      setLoggedFoods([...loggedFoods, food]);
-      setSelectedFood("");
-      setCustomFood({ foodName: "", totalCalories: "" });
-    } else if (customFood.foodName && customFood.totalCalories) {
+    if (customFood.foodName && customFood.totalCalories) {
       if (isNaN(customFood.totalCalories) || customFood.totalCalories <= 0) {
         alert("Please enter a valid number for total calories.");
         return;
@@ -303,7 +293,9 @@ export default function ProgressPage() {
               {loggedWorkouts.map((workout, index) => (
                 <tr key={index}>
                   <td className="border-b px-4 py-2">{workout.name}</td>
-                  <td className="border-b px-4 py-2">{workout.caloriesBurned}</td>
+                  <td className="border-b px-4 py-2">
+                    {workout.caloriesBurned}
+                  </td>
                   <td className="border-b px-4 py-2">
                     <button
                       onClick={() => handleDeleteWorkout(index)}

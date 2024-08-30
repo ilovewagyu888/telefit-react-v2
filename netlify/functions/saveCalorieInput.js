@@ -1,13 +1,4 @@
-import admin from 'firebase-admin';
-import { initializeApp, cert } from 'firebase-admin/app';
-import serviceAccount from '../../src/config/serviceAccountKey.json'; 
-
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-    initializeApp({
-        credential: cert(serviceAccount),
-    });
-}
+import { adminDb, admin } from '../../src/config/firebaseAdmin.js'; // Import adminDb and admin
 
 export const handler = async (event) => {
     // Parse the request body
@@ -32,8 +23,8 @@ export const handler = async (event) => {
     }
 
     try {
-        const db = admin.firestore();
-        const userRef = db.collection('users').doc(userId);
+        // Use the imported adminDb for Firestore operations
+        const userRef = adminDb.collection('users').doc(userId);
         const foodDocRef = userRef.collection('foods').doc(); // Generate a unique ID
 
         await foodDocRef.set({
