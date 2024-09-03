@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import WorkoutPage from "./pages/WorkoutPage";
 import CalorieCalculator from "./pages/CalorieCalculator";
 import ProgressPage from "./pages/Progress";
+import Settings  from "./pages/settings";
 
 export default function App() {
   return (
@@ -42,6 +43,10 @@ export default function App() {
 
             <Route exact path="/progress">
               <ProtectedRoute component={ProgressPage} />
+            </Route>
+
+            <Route exact path="/settings">
+              <ProtectedRoute component={Settings} />
             </Route>
 
             <Route exact path="/calories">

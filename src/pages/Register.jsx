@@ -34,7 +34,7 @@ export default function Register() {
             await setDoc(userDocRef, {
                 uid: user.uid,
                 email: user.email,
-                telegramId: telegramId || "N/A",  // Store Telegram ID or "N/A" if not provided
+                telegramId: telegramId || null,  // Store Telegram ID or null if not provided
                 createdAt: new Date()
             });
             history.push("/dashboard");
