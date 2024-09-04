@@ -588,7 +588,7 @@ const saveWorkoutLog = async (chatId, workoutId, date) => {
           }, { merge: true });
 
           await bot.sendMessage(chatId, `💪 Logged workout: ${workoutData.name} on ${date}.`);
-          await showWorkouts(chatId); // Show the workouts list again after logging
+          await showMainMenu(chatId); // Show the main menu after logging
       } else {
           await bot.sendMessage(chatId, '⚠️ This workout no longer exists.');
       }
@@ -617,7 +617,7 @@ const saveFoodLog = async (chatId, foodId, date) => {
           }, { merge: true });
 
           await bot.sendMessage(chatId, `🍲 Logged food: ${foodData.foodName} on ${date}.`);
-          await showWorkouts(chatId); // Show the workouts list again after logging
+          await showMainMenu(chatId); // Show the main menu after logging
       } else {
           await bot.sendMessage(chatId, '⚠️ This food item no longer exists.');
       }
