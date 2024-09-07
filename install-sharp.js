@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 const isNetlify = process.env.NETLIFY === 'true';
 const isWindows = process.platform === 'win32';
 
